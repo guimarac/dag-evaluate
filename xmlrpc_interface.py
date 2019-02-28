@@ -8,6 +8,7 @@ import os
 import sys
 import multiprocessing
 import time
+import argparse
 
 stop_server = False
 
@@ -131,22 +132,39 @@ class DagEvalServer:
         self.gen_number += 1
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description='Start server that evaluates machine learning pipelines.')
+
+    parser.add_argument('-l', '--log_path', required=True, type=str,
+                        help='Directory to save the logs.')
+
+    parser.add_argument('-n', '--n_cpus', type=int, default=1,
+                        help='Number of CPUs to use.')
+
+    parser.add_argument('-c', '--config', type=str,
+                        help='Configuration file.')
+
+    return parser.parse_args()
+
+
 if __name__ == '__main__':
 
-    log_path = sys.argv[1]
-    n_cpus = 1
-    if len(sys.argv) > 2:
-        n_cpus = int(sys.argv[2])
+    args = parse_args()
+
+    log_path = args.log_path
+    n_cpus = args.n_cpus
 
     port_number = 8080
 
-    if len(sys.argv) > 3:
-        config = json.load(open(sys.argv[3]))
+    if args.config:
+        config = json.load(open(args.config))
         server_url = config['serverUrl']
         port_number = int(server_url.split(':')[-1])
 
     print('log', log_path)
     print('port_number', port_number)
+    print()
 
     eval_server = DagEvalServer(log_path, n_cpus)
 
