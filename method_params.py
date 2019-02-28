@@ -16,7 +16,7 @@ model_names = {
     "PAC":          custom_models.make_predictor(linear_model.PassiveAggressiveClassifier),
     "LDA":          custom_models.make_predictor(discriminant_analysis.LinearDiscriminantAnalysis),
     "QDA":          custom_models.make_predictor(discriminant_analysis.QuadraticDiscriminantAnalysis),
-    "MLP":          custom_models.make_predictor(neural_network.MLPClassifier),
+    # "MLP":          custom_models.make_predictor(neural_network.MLPClassifier),
     "gaussianNB":   custom_models.make_predictor(naive_bayes.GaussianNB),
     "DT":           custom_models.make_predictor(tree.DecisionTreeClassifier),
     "union":        custom_models.Voter,
@@ -111,4 +111,4 @@ def create_param_set():
     return json.dumps(params)
 
 if __name__ == '__main__':
-    print(create_param_set(3, 200))
+    print(create_param_set())

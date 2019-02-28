@@ -43,7 +43,7 @@ def make_grid(param_set, partial_dict):
 
 def test_classifier(parameters, clsClass, feats, targets, filename):
     errors = []
-    for train_idx, test_idx in cross_validation.StratifiedKFold(targets, n_folds=5):
+    for train_idx, test_idx in model_selection.StratifiedKFold(targets, n_folds=5):
         cls = clsClass(**parameters)
         train_data = (feats.iloc[train_idx], targets.iloc[train_idx])
         test_data = (feats.iloc[test_idx], targets.iloc[test_idx])
