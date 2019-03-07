@@ -14,7 +14,6 @@ from hashlib import md5
 stop_server = False
 
 def eval_dags(inputs: multiprocessing.Queue, outputs: multiprocessing.Queue):
-
     while True:
         try:
             ind_id, ind_dag, filename, log_info = inputs.get(block=False)
@@ -44,23 +43,21 @@ class DagEvalServer:
         self.log = []
 
     def submit(self, canditate_string, datafile):
-        candidate = json.loads(canditate_string)
+        candidates = json.loads(canditate_string)
 
         sub_time = time.time()
         log_info = dict(submitted=sub_time)
 
         ids = []
 
-        for ind in candidate:
-            ind_dag = ind['code']
-
+        for ind in candidates:
             m = md5()
-            m.update((json.dumps(ind_dag) + str(sub_time)).encode())
+            m.update((json.dumps(ind) + str(sub_time)).encode())
             ind_id = m.hexdigest()
 
             ids.append(ind_id)
 
-            self.inputs.put((ind_id, ind_dag, datafile, log_info))
+            self.inputs.put((ind_id, ind, datafile, log_info))
 
         return ids
 
