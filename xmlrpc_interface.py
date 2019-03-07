@@ -42,27 +42,21 @@ class DagEvalServer:
             p.start()
         self.log = []
 
-    def submit(self, canditate_string, datafile):
-        candidates = json.loads(canditate_string)
+    def submit(self, candidate_string, datafile):
+        candidate = json.loads(candidate_string)
 
         sub_time = time.time()
         log_info = dict(submitted=sub_time)
 
-        ids = []
+        m = md5()
+        m.update((candidate_string + str(sub_time)).encode())
+        cand_id = m.hexdigest()
 
-        for ind in candidates:
-            m = md5()
-            m.update((json.dumps(ind) + str(sub_time)).encode())
-            ind_id = m.hexdigest()
+        self.inputs.put((cand_id, candidate, datafile, log_info))
 
-            ids.append(ind_id)
-
-            self.inputs.put((ind_id, ind, datafile, log_info))
-
-        return ids
+        return cand_id
 
     def get_evaluated(self):
-
         evaluated = []
 
         try:
