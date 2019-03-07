@@ -9,6 +9,7 @@ import sys
 import multiprocessing
 import time
 import argparse
+from hashlib import md5
 
 stop_server = False
 
@@ -42,16 +43,26 @@ class DagEvalServer:
             p.start()
         self.log = []
 
-    def submit(self, json_string, datafile):
+    def submit(self, canditate_string, datafile):
+        candidate = json.loads(canditate_string)
 
-        inds = json.loads(json_string)
-        log_info = dict(submitted=time.time())
-        for ind in inds:
-            ind_id = ind['id']
+        sub_time = time.time()
+        log_info = dict(submitted=sub_time)
+
+        ids = []
+
+        for ind in candidate:
             ind_dag = ind['code']
+
+            m = md5()
+            m.update((json.dumps(ind_dag) + str(sub_time)).encode())
+            ind_id = m.hexdigest()
+
+            ids.append(ind_id)
+
             self.inputs.put((ind_id, ind_dag, datafile, log_info))
 
-        return json.dumps('OK')
+        return ids
 
     def get_evaluated(self):
 
