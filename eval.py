@@ -375,10 +375,10 @@ def eval_dag(dag, filename, dag_id=None):
         ms = train_dag(dag, train_data)
         preds = test_dag(dag, ms, test_data)
 
-        acc = mm.quadratic_weighted_kappa(test_data[1], preds)
-        if filename == 'ml-prove.csv':
-            acc = metrics.accuracy_score(test_data[1], preds)
-        errors.append(acc)
+        # @TODO: Change this to accept other metrics
+        score = metrics.accuracy_score(test_data[1], preds)
+        
+        errors.append(score)
 
     m_errors = float(np.mean(errors))
     s_errors = float(np.std(errors))
