@@ -171,7 +171,10 @@ if __name__ == '__main__':
     server = SimpleXMLRPCServer(('localhost', port_number))
     server.register_instance(eval_server)
 
-    while not stop_server:
-        server.handle_request()
-
-    eval_server.kill_workers()
+    try:
+        server.serve_forever()
+    except Exception as e:
+        stop_server = True
+        server.kill_workers()
+        print('ERROR: ', str(e))
+        print(repr(e))
