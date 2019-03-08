@@ -9,7 +9,8 @@ import os
 import ml_metrics as mm
 import numpy as np
 import pandas as pd
-from sklearn import cross_validation, preprocessing, decomposition, feature_selection, metrics
+from sklearn import preprocessing, decomposition, feature_selection, metrics
+from sklearn.model_selection import StratifiedKFold
 
 import networkx as nx
 
@@ -408,7 +409,9 @@ def eval_dag(dag, filename, dag_id=None):
 
     start_time = time.time()
 
-    for train_idx, test_idx in cross_validation.StratifiedKFold(targets, n_folds=5):
+    skf = StratifiedKFold(n_splits=5)
+
+    for train_idx, test_idx in skf.split(feats, targets):
         train_data = (feats.iloc[train_idx], targets.iloc[train_idx])
         test_data = (feats.iloc[test_idx], targets.iloc[test_idx])
 

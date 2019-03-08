@@ -2,12 +2,12 @@ import method_params
 import json
 import custom_models
 import pandas as pd
-import ml_metrics as mm
 import numpy as np
 import functools
 import warnings
 
-from sklearn import cross_validation, metrics, preprocessing
+from sklearn import metrics, preprocessing
+from sklearn.model_selection import StratifiedKFold
 from multiprocessing import Pool, Value, Lock
 
 class Counter(object):
@@ -43,7 +43,10 @@ def make_grid(param_set, partial_dict):
 
 def test_classifier(parameters, clsClass, feats, targets, filename):
     errors = []
-    for train_idx, test_idx in model_selection.StratifiedKFold(targets, n_folds=5):
+
+    skf = StratifiedKFold(n_splits=5)
+
+    for train_idx, test_idx in skf(feats, targets):
         cls = clsClass(**parameters)
         train_data = (feats.iloc[train_idx], targets.iloc[train_idx])
         test_data = (feats.iloc[test_idx], targets.iloc[test_idx])
@@ -51,9 +54,7 @@ def test_classifier(parameters, clsClass, feats, targets, filename):
         cls.fit(train_data[0], train_data[1])
         preds = cls.predict(test_data[0])
 
-        acc = mm.quadratic_weighted_kappa(test_data[1], preds)
-        if filename == 'ml-prove.csv':
-            acc = metrics.accuracy_score(test_data[1], preds)
+        acc = metrics.accuracy_score(test_data[1], preds)
         errors.append(acc)
 
     return errors, parameters

@@ -8,13 +8,12 @@ ml-metrics==0.1.4
 networkx==1.11
 numpy==1.11.0
 pandas==0.18.1
-pkg-resources==0.0.0
 pydot-ng==1.0.0
 pyparsing==2.1.1
 python-dateutil==2.5.3
 pytz==2016.4
 pyzmq==15.2.0
-scikit-learn==0.17
+scikit-learn
 scipy==0.17.0
 scoop==0.7.1.1
 six==1.10.0

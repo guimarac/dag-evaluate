@@ -3,7 +3,7 @@ __author__ = 'Martin'
 import pandas as pd
 import numpy as np
 from scipy import stats
-from sklearn import cross_validation
+from sklearn.model_selection import StratifiedKFold
 from sklearn import ensemble
 
 def is_transformer(cls):
@@ -156,7 +156,9 @@ class Stacker(Aggregator):
         import eval
         preds = [[] for _ in self.sub_dags]
 
-        for train_idx, test_idx in cross_validation.StratifiedKFold(y, n_folds=5):
+        skf = StratifiedKFold(n_splits=5)
+
+        for train_idx, test_idx in skf.split(X, y):
             tr_X, tr_y = X.iloc[train_idx], y.iloc[train_idx]
             tst_X, tst_y = X.iloc[test_idx], y.iloc[test_idx]
             wf_init = Workflow(self.initial_dag)
