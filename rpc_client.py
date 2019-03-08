@@ -12,25 +12,31 @@ class RPCClient(object):
         return self.server_proxy.submit(candidate, dataset)
 
     def get_evaluated(self):
-        ev_lst = json.loads(self.server_proxy.get_evaluated())
+        cand_id, metrics = json.loads(self.server_proxy.get_evaluated())
+        print('id:', cand_id)
+        print()
+        print(metrics)
+
+        metrics['id'] = cand_id
 
         results = []
 
-        for ev in ev_lst:
-            cand_id = ev[0]
-            metrics = ev[1]
+        # for ev in ev_lst:
+        #     cand_id = ev[0]
+        #     metrics = ev[1]
 
-            results.append(dict(
-                id=cand_id,
-                mean=metrics[0],
-                std=metrics[1],
-                time=metrics[2]
-            ))
+        #     results.append(dict(
+        #         id=cand_id,
+        #         mean=metrics[0],
+        #         std=metrics[1],
+        #         time=metrics[2]
+        #     ))
 
-        return results
+        return metrics
 
     def get_datasets(self):
         pass
 
     def get_metrics(self):
         pass
+

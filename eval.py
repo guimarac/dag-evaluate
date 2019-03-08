@@ -403,7 +403,8 @@ def eval_dag(dag, filename, dag_id=None):
     ix = targets.index
     targets = pd.Series(le.fit_transform(targets), index=ix)
 
-    errors = []
+    scores = []
+    times = []
 
     start_time = time.time()
 
@@ -411,18 +412,31 @@ def eval_dag(dag, filename, dag_id=None):
         train_data = (feats.iloc[train_idx], targets.iloc[train_idx])
         test_data = (feats.iloc[test_idx], targets.iloc[test_idx])
 
+        start_time = time.time()
         ms = train_dag(dag, train_data)
+        end_time = time.time()
+
         preds = test_dag(dag, ms, test_data)
 
         # @TODO: Change this to accept other metrics
         score = metrics.accuracy_score(test_data[1], preds)
 
-        errors.append(score)
+        scores.append(score)
+        times.append(end_time - start_time)
 
-    m_errors = float(np.mean(errors))
-    s_errors = float(np.std(errors))
+    acc_mean = float(np.mean(scores))
+    acc_std = float(np.std(scores))
 
-    return m_errors, s_errors, time.time() - start_time
+    time_mean = np.mean(times)
+    time_std = np.mean(times)
+
+    results = dict(
+        time=dict(mean=time_mean, std=time_std),
+        accuracy=dict(mean=acc_mean, std=acc_std)
+    )
+
+    # return acc_mean, acc_std, np.mean(times)
+    return results
 
 
 def safe_dag_eval(dag, filename, dag_id=None):

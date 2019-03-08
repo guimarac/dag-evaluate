@@ -19,5 +19,5 @@ time.sleep(6)
 results = client.get_evaluated()
 
 print('\nResults:')
-for r in results:
-    print(r)
+print(results)
+
