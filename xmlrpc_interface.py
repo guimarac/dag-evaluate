@@ -97,13 +97,21 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description='Start server that evaluates machine learning pipelines.')
 
-    parser.add_argument('-l', '--log_path', required=True, type=str,
+
+    parser.add_argument('-p', '--port-number',
+                        required=True, type=int, default=80,
+                        help='Port in which the server is supposed to run.')
+
+    parser.add_argument('-l', '--log_path',
+                        required=True, type=str,
                         help='Directory to save the logs.')
 
-    parser.add_argument('-n', '--n_cpus', type=int, default=1,
+    parser.add_argument('-n', '--n_cpus',
+                        type=int, default=1,
                         help='Number of CPUs to use.')
 
-    parser.add_argument('-c', '--config', type=str,
+    parser.add_argument('-c', '--config',
+                        type=str,
                         help='Configuration file.')
 
     return parser.parse_args()
@@ -116,20 +124,23 @@ if __name__ == '__main__':
     log_path = args.log_path
     n_cpus = args.n_cpus
 
-    port_number = 8080
+    port_number = args.port_number
+    server_url = '0.0.0.0'
 
     if args.config:
         config = json.load(open(args.config))
         server_url = config['serverUrl']
         port_number = int(server_url.split(':')[-1])
 
-    print('log', log_path)
-    print('port_number', port_number)
+    print('=============== Server Settings:')
+    print('Log path: ', log_path)
+    print('Server URL: ', server_url)
+    print('Port Number:', port_number)
     print()
 
     eval_server = DagEvalServer(log_path, n_cpus)
 
-    server = SimpleXMLRPCServer(('localhost', port_number))
+    server = SimpleXMLRPCServer((server_url, port_number))
     server.register_instance(eval_server)
 
     try:
@@ -137,5 +148,5 @@ if __name__ == '__main__':
     except Exception as e:
         stop_server = True
         server.kill_workers()
-        print('ERROR: ', str(e))
+        print("ERROR: ", str(e))
         print(repr(e))
