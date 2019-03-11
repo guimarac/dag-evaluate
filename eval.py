@@ -6,7 +6,6 @@ import joblib
 import pprint
 import os
 
-import ml_metrics as mm
 import numpy as np
 import pandas as pd
 from sklearn import preprocessing, decomposition, feature_selection, metrics
@@ -386,10 +385,15 @@ input_cache = {}
 
 
 def eval_dag(dag, filename, dag_id=None):
+    metrics_dict = {
+        'accuracy': metrics.accuracy_score,
+        'f1': metrics.f1_score,
+        'recall': metrics.recall_score,
+        'precision': metrics.precision_score
+    }
+    scores_dict = {metric: [] for metric in metrics_dict.keys()}
 
     dag = normalize_dag(dag)
-    # utils.draw_dag(dag)
-    # pprint.pprint(dag)
 
     if filename not in input_cache:
         input_cache[filename] = pd.read_csv('data/' + filename, sep=';')
@@ -404,7 +408,6 @@ def eval_dag(dag, filename, dag_id=None):
     ix = targets.index
     targets = pd.Series(le.fit_transform(targets), index=ix)
 
-    scores = []
     times = []
 
     start_time = time.time()
@@ -421,24 +424,27 @@ def eval_dag(dag, filename, dag_id=None):
 
         preds = test_dag(dag, ms, test_data)
 
-        # @TODO: Change this to accept other metrics
-        score = metrics.accuracy_score(test_data[1], preds)
+        for metric, method in metrics_dict.items():
+            if metric != 'accuracy':
+                sc = method(test_data[1], preds, average='macro')
+            else:
+                sc = method(test_data[1], preds)
+            scores_dict[metric].append(sc)
 
-        scores.append(score)
         times.append(end_time - start_time)
 
-    acc_mean = float(np.mean(scores))
-    acc_std = float(np.std(scores))
+    results = {
+        m: {
+            'mean': np.mean(scores_dict[m]),
+            'std': np.std(scores_dict[m])
+        } for m in scores_dict.keys()
+    }
 
-    time_mean = np.mean(times)
-    time_std = np.mean(times)
+    results['time'] = {
+        'mean': np.mean(times),
+        'std': np.std(times)
+    }
 
-    results = dict(
-        time=dict(mean=time_mean, std=time_std),
-        accuracy=dict(mean=acc_mean, std=acc_std)
-    )
-
-    # return acc_mean, acc_std, np.mean(times)
     return results
 
 
