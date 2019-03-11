@@ -17,11 +17,12 @@ stop_server = False
 def eval_dags(inputs: multiprocessing.Queue, outputs: multiprocessing.Queue):
     while True:
         try:
-            ind_id, ind_dag, filename, log_info = inputs.get(block=False)
+            ind_id, ind_dag, filename, log_info, metrics_list = inputs.get(
+                block=False)
             log_info['size'] = len(ind_dag)
             log_info['eval_start'] = time.time()
             errors, id = eval.safe_dag_eval(
-                dag=ind_dag, filename=filename, dag_id=ind_id)
+                dag=ind_dag, filename=filename, dag_id=ind_id, metrics_list=metrics_list)
             assert ind_id == id
             log_info['eval_end'] = time.time()
             outputs.put((ind_id, errors, ind_dag, log_info))
@@ -46,7 +47,7 @@ class DagEvalServer:
             p.start()
         self.log = []
 
-    def submit(self, candidate_string, datafile):
+    def submit(self, candidate_string, datafile, metrics_list):
         candidate = json.loads(candidate_string)
 
         sub_time = time.time()
@@ -56,12 +57,13 @@ class DagEvalServer:
         m.update((candidate_string + str(sub_time)).encode())
         cand_id = m.hexdigest()
 
-        self.inputs.put((cand_id, candidate, datafile, log_info))
+        self.inputs.put((cand_id, candidate, datafile, log_info, metrics_list))
 
         return cand_id
 
     def get_evaluated(self):
-        ind_id, ind_scores, ind_dag, log_info = self.outputs.get(block=False)
+        ind_id, ind_scores, ind_dag, log_info = self.outputs.get(
+            block=False)
 
         return json.dumps([ind_id, ind_scores])
 
@@ -74,8 +76,10 @@ class DagEvalServer:
 
     def get_param_sets(self, datafile):
         """
-        Returns the set of possible values of parameters for each method based on the given datafile.
-        :return: The JSON string containing the dictionary of the parameter values for each supported method.
+        Returns the set of possible values of parameters for each method
+        based on the given datafile.
+        :return: The JSON string containing the dictionary of the parameter 
+                 values for each supported method.
         """
         return method_params.create_param_set()
 

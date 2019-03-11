@@ -8,7 +8,7 @@ import os
 
 import numpy as np
 import pandas as pd
-from sklearn import preprocessing, decomposition, feature_selection, metrics
+from sklearn import preprocessing, decomposition, feature_selection
 from sklearn.model_selection import StratifiedKFold
 
 import networkx as nx
@@ -18,6 +18,8 @@ import utils
 import inspect
 
 from sklearn.base import ClassifierMixin, RegressorMixin
+
+from available_metrics import available_metrics
 
 cache_dir = 'cache'
 if os.path.exists('/media/ramdisk'):
@@ -384,12 +386,12 @@ def process_boosters(dag):
 input_cache = {}
 
 
-def eval_dag(dag, filename, dag_id=None):
+def eval_dag(dag, filename, metrics_list, dag_id=None):
     metrics_dict = {
-        'accuracy': metrics.accuracy_score,
-        'f1': metrics.f1_score,
-        'recall': metrics.recall_score,
-        'precision': metrics.precision_score
+        metric['name']: {
+            'method': available_metrics[metric['metric']],
+            'args': metric['args']
+        } for metric in metrics_list
     }
     scores_dict = {metric: [] for metric in metrics_dict.keys()}
 
@@ -424,12 +426,12 @@ def eval_dag(dag, filename, dag_id=None):
 
         preds = test_dag(dag, ms, test_data)
 
-        for metric, method in metrics_dict.items():
-            if metric != 'accuracy':
-                sc = method(test_data[1], preds, average='macro')
-            else:
-                sc = method(test_data[1], preds)
-            scores_dict[metric].append(sc)
+        for metric, config_dict in metrics_dict.items():
+            method = config_dict['method']
+            args = config_dict['args']
+            score = method(test_data[1], preds, **args)
+
+            scores_dict[metric].append(score)
 
         times.append(end_time - start_time)
 
@@ -448,12 +450,12 @@ def eval_dag(dag, filename, dag_id=None):
     return results
 
 
-def safe_dag_eval(dag, filename, dag_id=None):
-
+def safe_dag_eval(dag, filename, metrics_list, dag_id=None):
     import traceback
     import json
+
     try:
-        return eval_dag(dag, filename, dag_id), dag_id
+        return eval_dag(dag, filename, metrics_list, dag_id), dag_id
     except Exception as e:
         with open('error.' + str(dag_id), 'w') as err:
             err.write(str(e) + '\n')
@@ -461,32 +463,3 @@ def safe_dag_eval(dag, filename, dag_id=None):
                 err.write(line)
             err.write(json.dumps(dag))
     return (), dag_id
-
-
-if __name__ == '__main__':
-
-    datafile = "ml-prove.csv"
-    dags = utils.read_json('test_err.json')
-
-    results = dict()
-
-    remaining_dags = [d for d in enumerate(dags) if str(d[0]) not in results]
-    print("Starting...", len(remaining_dags))
-    pprint.pprint(remaining_dags)
-
-    for e in map(lambda x: safe_dag_eval(x[1], datafile, x[0]), remaining_dags):
-        results[str(e[1])] = e
-        print(e)
-        print("Model %4d: Cross-validation error: %.5f (+-%.5f)" %
-              (e[1], e[0][0], e[0][1]))
-        sys.stdout.flush()
-
-    print("-" * 80)
-    best_error = sorted(
-        results.values(), key=lambda x: x[0][0] - 2 * x[0][1], reverse=True)[0]
-    print("Best model CV error: %.5f (+-%.5f)" %
-          (best_error[0][0], best_error[0][1]))
-
-    import pprint
-    print("Model: ", end='')
-    pprint.pprint(dags[best_error[1]])
