@@ -13,24 +13,8 @@ class RPCClient(object):
 
     def get_evaluated(self):
         cand_id, metrics = json.loads(self.server_proxy.get_evaluated())
-        print('id:', cand_id)
-        print()
-        print(metrics)
 
         metrics['id'] = cand_id
-
-        results = []
-
-        # for ev in ev_lst:
-        #     cand_id = ev[0]
-        #     metrics = ev[1]
-
-        #     results.append(dict(
-        #         id=cand_id,
-        #         mean=metrics[0],
-        #         std=metrics[1],
-        #         time=metrics[2]
-        #     ))
 
         return metrics
 
@@ -39,4 +23,3 @@ class RPCClient(object):
 
     def get_metrics(self):
         pass
-
