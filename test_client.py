@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
-import time
-
 from rpc_client import RPCClient
+
 
 client = RPCClient('http://localhost:8080')
 # client = RPCClient('http://automl.speed.dcc.ufmg.br:80')
 
-json_string =   '{"input": [[], "input", ["1:0"]], "1": [["1:0"], ["gaussianNB", {}], []]}'
+json_string = '{"input": [[], "input", ["1:0"]], "1": [["1:0"], ["gaussianNB", {}], []]}'
 dataset = 'winequality-white.csv'
 
 metrics_list = [
@@ -19,11 +18,7 @@ metrics_list = [
 
 cand_id = client.submit(json_string, dataset, metrics_list)
 
-print('Candidate id:', cand_id)
-
-time.sleep(6)
-
-results = client.get_evaluated()
+results = client.get_evaluated(cand_id)
 
 print('\nResults:')
 print(results)

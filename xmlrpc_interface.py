@@ -14,58 +14,67 @@ from hashlib import md5
 stop_server = False
 
 
-def eval_dags(inputs: multiprocessing.Queue, outputs: multiprocessing.Queue):
+def eval_dags(inputs: multiprocessing.Queue, evaluated_list):
     while True:
         try:
-            ind_id, ind_dag, filename, log_info, metrics_list = inputs.get(
-                block=False)
-            log_info['size'] = len(ind_dag)
-            log_info['eval_start'] = time.time()
-            errors, id = dag_evaluator.safe_dag_eval(
-                dag=ind_dag, filename=filename, dag_id=ind_id, metrics_list=metrics_list)
-            assert ind_id == id
-            log_info['eval_end'] = time.time()
-            outputs.put((ind_id, errors, ind_dag, log_info))
+            ind_id, ind_dag, filename, metrics_list = inputs.get(block=False)
+
+            ind_scores, _ind_id = eval.safe_dag_eval(
+                dag=ind_dag,
+                filename=filename,
+                dag_id=ind_id,
+                metrics_list=metrics_list
+            )
+
+            assert ind_id == _ind_id
+
+            evaluated_list.append([ind_id, ind_scores])
         except Exception:
             time.sleep(1)
 
 
 class DagEvalServer:
 
-    def __init__(self, log_path, n_cpus):
+    def __init__(self, n_cpus):
+        self.manager = multiprocessing.Manager()
+        self.evaluated_list = self.manager.list()
+
         if n_cpus < 0:
             n_cpus = multiprocessing.cpu_count()
         self.n_cpus = n_cpus
-        self.log_path = log_path
-        os.makedirs(self.log_path, exist_ok=True)
+
         self.gen_number = 0
+
         self.inputs = multiprocessing.Queue()
-        self.outputs = multiprocessing.Queue()
+
         self.processes = [multiprocessing.Process(target=eval_dags, args=(
-            self.inputs, self.outputs)) for _ in range(n_cpus)]
+            self.inputs,
+            self.evaluated_list)
+        ) for _ in range(n_cpus)]
+
         for p in self.processes:
             p.start()
-        self.log = []
 
     def submit(self, candidate_string, datafile, metrics_list):
         candidate = json.loads(candidate_string)
 
         sub_time = time.time()
-        log_info = dict(submitted=sub_time)
 
         m = md5()
         m.update((candidate_string + str(sub_time)).encode())
         cand_id = m.hexdigest()
 
-        self.inputs.put((cand_id, candidate, datafile, log_info, metrics_list))
+        self.inputs.put((cand_id, candidate, datafile, metrics_list))
 
         return cand_id
 
-    def get_evaluated(self):
-        ind_id, ind_scores, ind_dag, log_info = self.outputs.get(
-            block=False)
+    def get_evaluated(self, ind_id):
+        for ind in self.evaluated_list:
+            if ind[0] == ind_id:
+                self.evaluated_list.remove(ind)
+                return json.dumps([ind_id, ind])
 
-        return json.dumps([ind_id, ind_scores])
+        return json.dumps([None, None])
 
     def get_core_count(self):
         return json.dumps(self.n_cpus)
@@ -84,31 +93,18 @@ class DagEvalServer:
         return method_params.create_param_set()
 
     def quit(self):
-        self.__write_logs()
         global stop_server
         stop_server = True
         return json.dumps('OK')
-
-    def __write_logs(self):
-        log_fn = os.path.join(self.log_path, 'log_%03d.json' % self.gen_number)
-        with open(log_fn, 'w') as log_file:
-            json.dump(self.log, log_file)
-        self.log = []
-        self.gen_number += 1
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
         description='Start server that evaluates machine learning pipelines.')
 
-
     parser.add_argument('-p', '--port-number',
                         required=True, type=int, default=80,
                         help='Port in which the server is supposed to run.')
-
-    parser.add_argument('-l', '--log_path',
-                        required=True, type=str,
-                        help='Directory to save the logs.')
 
     parser.add_argument('-n', '--n_cpus',
                         type=int, default=1,
@@ -125,7 +121,6 @@ if __name__ == '__main__':
 
     args = parse_args()
 
-    log_path = args.log_path
     n_cpus = args.n_cpus
 
     port_number = args.port_number
@@ -137,12 +132,11 @@ if __name__ == '__main__':
         port_number = int(server_url.split(':')[-1])
 
     print('=============== Server Settings:')
-    print('Log path: ', log_path)
     print('Server URL: ', server_url)
     print('Port Number:', port_number)
     print()
 
-    eval_server = DagEvalServer(log_path, n_cpus)
+    eval_server = DagEvalServer(n_cpus)
 
     server = SimpleXMLRPCServer((server_url, port_number))
     server.register_instance(eval_server)
