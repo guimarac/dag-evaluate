@@ -2,7 +2,7 @@ __author__ = 'Martin'
 
 from xmlrpc.server import SimpleXMLRPCServer
 import json
-import eval
+import dag_evaluator
 import method_params
 import os
 import sys
@@ -21,7 +21,7 @@ def eval_dags(inputs: multiprocessing.Queue, outputs: multiprocessing.Queue):
                 block=False)
             log_info['size'] = len(ind_dag)
             log_info['eval_start'] = time.time()
-            errors, id = eval.safe_dag_eval(
+            errors, id = dag_evaluator.safe_dag_eval(
                 dag=ind_dag, filename=filename, dag_id=ind_id, metrics_list=metrics_list)
             assert ind_id == id
             log_info['eval_end'] = time.time()

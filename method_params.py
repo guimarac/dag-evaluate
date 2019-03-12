@@ -1,36 +1,65 @@
 __author__ = 'Martin'
 
 import custom_models
-from sklearn import decomposition, feature_selection, svm, linear_model, naive_bayes, tree, discriminant_analysis, neural_network
+from sklearn import svm
+from sklearn import tree
+from sklearn import naive_bayes
+from sklearn import linear_model
+from sklearn import decomposition
+from sklearn import neural_network
+from sklearn import feature_selection
+from sklearn import discriminant_analysis
 import json
 
 model_names = {
-    "PCA":          custom_models.make_transformer(decomposition.PCA),
-    "kBest":        custom_models.make_transformer(feature_selection.SelectKBest),
-    "kMeans":       custom_models.make_transformer(custom_models.KMeansSplitter),
-    "copy":         [],
-    "SVC":          custom_models.make_predictor(svm.SVC),
-    "logR":         custom_models.make_predictor(linear_model.LogisticRegression),
-    "Perceptron":   custom_models.make_predictor(linear_model.Perceptron),
-    "SGD":          custom_models.make_predictor(linear_model.SGDClassifier),
-    "PAC":          custom_models.make_predictor(linear_model.PassiveAggressiveClassifier),
-    "LDA":          custom_models.make_predictor(discriminant_analysis.LinearDiscriminantAnalysis),
-    "QDA":          custom_models.make_predictor(discriminant_analysis.QuadraticDiscriminantAnalysis),
-    # "MLP":          custom_models.make_predictor(neural_network.MLPClassifier),
-    "gaussianNB":   custom_models.make_predictor(naive_bayes.GaussianNB),
-    "DT":           custom_models.make_predictor(tree.DecisionTreeClassifier),
-    "union":        custom_models.Voter,
-    "vote":         custom_models.Voter,
-    "stacker":      custom_models.Stacker,
-    "booster":      custom_models.Booster
+    "PCA":
+        custom_models.make_transformer(decomposition.PCA),
+    "kBest":
+        custom_models.make_transformer(feature_selection.SelectKBest),
+    "kMeans":
+        custom_models.make_transformer(custom_models.KMeansSplitter),
+    "copy":
+        [],
+    "SVC":
+        custom_models.make_predictor(svm.SVC),
+    "logR":
+        custom_models.make_predictor(linear_model.LogisticRegression),
+    "Perceptron":
+        custom_models.make_predictor(linear_model.Perceptron),
+    "SGD":
+        custom_models.make_predictor(linear_model.SGDClassifier),
+    "PAC":
+        custom_models.make_predictor(linear_model.PassiveAggressiveClassifier),
+    "LDA":
+        custom_models.make_predictor(discriminant_analysis.
+                                     LinearDiscriminantAnalysis),
+    "QDA":
+        custom_models.make_predictor(discriminant_analysis.
+                                     QuadraticDiscriminantAnalysis),
+    # "MLP":
+    #     custom_models.make_predictor(neural_network.MLPClassifier),
+    "gaussianNB":
+        custom_models.make_predictor(naive_bayes.GaussianNB),
+    "DT":
+        custom_models.make_predictor(tree.DecisionTreeClassifier),
+    "union":
+        custom_models.Voter,
+    "vote":
+        custom_models.Voter,
+    "stacker":
+        custom_models.Stacker,
+    "booster":
+        custom_models.Booster
 }
 
 
 def create_param_set():
     """
-    Creates the set of parameters for all the methods supported by the dag evaluator.
+    Creates the set of parameters for all the methods supported
+    by the dag evaluator.
     :param num_features: The number of features in the dataset.
-    :return: Dictionary containing dictionaries with lists of values of parameters for each method.
+    :return: Dictionary containing dictionaries with lists of values of
+    parameters for each method.
     """
 
     feat_frac = [0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 1]
@@ -109,6 +138,7 @@ def create_param_set():
     }
 
     return json.dumps(params)
+
 
 if __name__ == '__main__':
     print(create_param_set())
