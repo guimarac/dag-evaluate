@@ -14,18 +14,27 @@ from hashlib import md5
 stop_server = False
 
 
-def eval_dags(inputs: multiprocessing.Queue, outputs: multiprocessing.Queue):
+def eval_dags(inputs: multiprocessing.Queue, evaluated_list):
     while True:
         try:
             ind_id, ind_dag, filename, log_info, metrics_list = inputs.get(
                 block=False)
+
             log_info['size'] = len(ind_dag)
             log_info['eval_start'] = time.time()
-            errors, id = eval.safe_dag_eval(
-                dag=ind_dag, filename=filename, dag_id=ind_id, metrics_list=metrics_list)
-            assert ind_id == id
+
+            ind_scores, _ind_id = eval.safe_dag_eval(
+                dag=ind_dag,
+                filename=filename,
+                dag_id=ind_id,
+                metrics_list=metrics_list
+            )
+
+            assert ind_id == _ind_id
+
             log_info['eval_end'] = time.time()
-            outputs.put((ind_id, errors, ind_dag, log_info))
+
+            evaluated_list.append([ind_id, ind_scores])
         except Exception:
             time.sleep(1)
 
@@ -33,18 +42,28 @@ def eval_dags(inputs: multiprocessing.Queue, outputs: multiprocessing.Queue):
 class DagEvalServer:
 
     def __init__(self, log_path, n_cpus):
+        self.manager = multiprocessing.Manager()
+        self.evaluated_list = self.manager.list()
+
         if n_cpus < 0:
             n_cpus = multiprocessing.cpu_count()
         self.n_cpus = n_cpus
+
         self.log_path = log_path
         os.makedirs(self.log_path, exist_ok=True)
+
         self.gen_number = 0
+
         self.inputs = multiprocessing.Queue()
-        self.outputs = multiprocessing.Queue()
+
         self.processes = [multiprocessing.Process(target=eval_dags, args=(
-            self.inputs, self.outputs)) for _ in range(n_cpus)]
+            self.inputs,
+            self.evaluated_list)
+        ) for _ in range(n_cpus)]
+
         for p in self.processes:
             p.start()
+
         self.log = []
 
     def submit(self, candidate_string, datafile, metrics_list):
@@ -61,11 +80,13 @@ class DagEvalServer:
 
         return cand_id
 
-    def get_evaluated(self):
-        ind_id, ind_scores, ind_dag, log_info = self.outputs.get(
-            block=False)
+    def get_evaluated(self, ind_id):
+        for ind in self.evaluated_list:
+            if ind[0] == ind_id:
+                self.evaluated_list.remove(ind)
+                return json.dumps([ind_id, ind])
 
-        return json.dumps([ind_id, ind_scores])
+        return json.dumps([None, None])
 
     def get_core_count(self):
         return json.dumps(self.n_cpus)
@@ -78,7 +99,7 @@ class DagEvalServer:
         """
         Returns the set of possible values of parameters for each method
         based on the given datafile.
-        :return: The JSON string containing the dictionary of the parameter 
+        :return: The JSON string containing the dictionary of the parameter
                  values for each supported method.
         """
         return method_params.create_param_set()
@@ -100,7 +121,6 @@ class DagEvalServer:
 def parse_args():
     parser = argparse.ArgumentParser(
         description='Start server that evaluates machine learning pipelines.')
-
 
     parser.add_argument('-p', '--port-number',
                         required=True, type=int, default=80,
