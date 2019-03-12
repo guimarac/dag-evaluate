@@ -10,10 +10,17 @@ class RPCClient(object):
         self.server_url = server_url
         self.server_proxy = ServerProxy(server_url)
 
-    def submit(self, candidate, dataset, metrics_list):
+    def evaluate_pipeline(self, candidate, dataset, metrics_list):
+        _dataset = dataset + '.csv'
+
+        cand_id = self._submit(candidate, _dataset, metrics_list)
+
+        return cand_id, self._get_evaluated(cand_id)
+
+    def _submit(self, candidate, dataset, metrics_list):
         return self.server_proxy.submit(candidate, dataset, metrics_list)
 
-    def get_evaluated(self, candidate_id):
+    def _get_evaluated(self, candidate_id):
         attempts = 0
         limit = 20
         step = 2
