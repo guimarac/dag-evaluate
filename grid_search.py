@@ -10,6 +10,7 @@ from sklearn import metrics, preprocessing
 from sklearn.model_selection import StratifiedKFold
 from multiprocessing import Pool, Value, Lock
 
+
 class Counter(object):
     def __init__(self, initval=0):
         self.val = Value('i', initval)
@@ -24,6 +25,7 @@ class Counter(object):
             return self.val.value
 
 warnings.filterwarnings("ignore",category=DeprecationWarning)
+
 
 def make_grid(param_set, partial_dict):
     if not param_set:
@@ -40,6 +42,7 @@ def make_grid(param_set, partial_dict):
                 result += make_grid(param_set, partial_dict.copy())
             break
     return result
+
 
 def test_classifier(parameters, clsClass, feats, targets, filename):
     errors = []
@@ -58,6 +61,7 @@ def test_classifier(parameters, clsClass, feats, targets, filename):
         errors.append(acc)
 
     return errors, parameters
+
 
 if __name__ == '__main__':
 

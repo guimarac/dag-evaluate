@@ -1,20 +1,24 @@
 __author__ = 'Martin'
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 from scipy import stats
-from sklearn.model_selection import StratifiedKFold
 from sklearn import ensemble
+from sklearn.model_selection import StratifiedKFold
+
 
 def is_transformer(cls):
     return hasattr(cls, '__dageva_type') and cls.__dageva_type == 'transformer'
 
+
 def is_predictor(cls):
     return hasattr(cls, '__dageva_type') and cls.__dageva_type == 'predictor'
 
+
 def make_transformer(cls):
     """
-    Adds Transformer to the bases of the cls class, useful in order to distinguish between transformers and predictors.
+    Adds Transformer to the bases of the cls class, useful in order to
+    distinguish between transformers and predictors.
     :param cls: The class to turn into a Transformer
     :return: A class equivalent to cls, but with Transformer among its bases
     """
@@ -24,7 +28,8 @@ def make_transformer(cls):
 
 def make_predictor(cls):
     """
-    Adds Predictor to the bases of the cls class, useful in order to distinguish between transformers and predictors.
+    Adds Predictor to the bases of the cls class, useful in order to
+    distinguish between transformers and predictors.
     :param cls: The class to turn into a Predictor
     :return: A class equivalent to cls, but with Predictor among its bases
     """
@@ -77,13 +82,14 @@ class ConstantModel:
         return self
 
     def predict(self, x):
-        return pd.Series(np.array([self.cls]*len(x)), index=x.index)
+        return pd.Series(np.array([self.cls] * len(x)), index=x.index)
 
 
 class Aggregator:
 
     def aggregate(self, x, y):
         pass
+
 
 class Voter(Aggregator):
 
@@ -110,7 +116,7 @@ class Voter(Aggregator):
             return self.union_aggregate(x, y)
         res = pd.DataFrame(index=y[0].index)
         for i in range(len(y)):
-            res["p"+str(i)] = y[i]
+            res["p" + str(i)] = y[i]
         modes = res.apply(lambda row: stats.mode(row, axis=None)[0][0], axis=1)
         if modes.empty:
             return x[0], pd.Series()
@@ -192,7 +198,9 @@ class Booster(ensemble.AdaBoostClassifier):
     def __init__(self, sub_dags=()):
         self.sub_dags = sub_dags
         self.current_sub_dag = 0
-        super(Booster, self).__init__(base_estimator=Workflow(), n_estimators=len(sub_dags), algorithm='SAMME')
+        super(Booster, self).__init__(base_estimator=Workflow(),
+                                      n_estimators=len(sub_dags),
+                                      algorithm='SAMME')
 
     def _make_estimator(self, append=True, random_state=0):
 

@@ -2,7 +2,7 @@ __author__ = 'Martin'
 
 from xmlrpc.server import SimpleXMLRPCServer
 import json
-import eval
+import dag_evaluator
 import method_params
 import os
 import sys
@@ -87,7 +87,7 @@ class DagEvalServer:
         """
         Returns the set of possible values of parameters for each method
         based on the given datafile.
-        :return: The JSON string containing the dictionary of the parameter
+        :return: The JSON string containing the dictionary of the parameter 
                  values for each supported method.
         """
         return method_params.create_param_set()

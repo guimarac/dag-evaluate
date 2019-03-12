@@ -1,25 +1,26 @@
-__author__ = "Martin Pilat"
 
+
+import os
 import sys
 import time
+import json
 import joblib
 import pprint
-import os
-
+import traceback
 import numpy as np
 import pandas as pd
-from sklearn import preprocessing, decomposition, feature_selection
-from sklearn.model_selection import StratifiedKFold
-
 import networkx as nx
+from available_metrics import available_metrics
+from sklearn.model_selection import StratifiedKFold
+from sklearn.base import ClassifierMixin, RegressorMixin
+from sklearn import preprocessing, decomposition, feature_selection
+
 
 import custom_models
 import utils
 import inspect
+from dag_parser import normalize_dag
 
-from sklearn.base import ClassifierMixin, RegressorMixin
-
-from available_metrics import available_metrics
 
 cache_dir = 'cache'
 if os.path.exists('/media/ramdisk'):
@@ -31,7 +32,10 @@ memory = joblib.Memory(cachedir=cache_dir, verbose=False)
 
 @memory.cache
 def fit_model(model, values, targets, sample_weight=None):
-    if isinstance(model, ClassifierMixin) or isinstance(model, RegressorMixin) or isinstance(model, custom_models.KMeansSplitter):
+    isClass = isinstance(model, ClassifierMixin)
+    isRegr = isinstance(model, RegressorMixin)
+    isSpl = isinstance(model, custom_models.KMeansSplitter)
+    if isClass or isRegr or isSpl:
         if 'sample_weight' in inspect.signature(model.fit).parameters:
             return model.fit(values, targets, sample_weight=sample_weight)
     return model.fit(values, targets)
@@ -41,7 +45,8 @@ def data_ready(req, cache):
     """
     Checks that all required data are in the data_cache
 
-    :param req: string or list of string containing the keys of required data in cache
+    :param req: string or list of string containing the keys of
+    required data in cache
     :param cache: dictionary with the computed data
     :return: Boolean indicating whether all required data are in cache
     """
@@ -56,7 +61,8 @@ def get_data(data_list, data_cache):
 
     :param data_list: string or list of strings
     :param data_cache: dictionary containing the stored data
-    :return: a single pandas.DataFrame if input is a string, a list of DataFrames if the input is a list of strings
+    :return: a single pandas.DataFrame if input is a string,
+    a list of DataFrames if the input is a list of strings
     """
     if not isinstance(data_list, list):
         data_list = [data_list]
@@ -81,19 +87,23 @@ def train_dag(dag, train_data, sample_weight=None):
     data_cache = dict()
 
     # happens inside booster
-    if isinstance(train_data[0], np.ndarray) and isinstance(train_data[1], np.ndarray):
-        train_data = (pd.DataFrame(train_data[0]), pd.Series(train_data[1]))
+    isarray_0 = isinstance(train_data[0], np.ndarray)
+    isarray_1 = isinstance(train_data[1], np.ndarray)
+    if isarray_0 and isarray_1:
+        train_data = (pd.DataFrame(train_data[0]),
+                      pd.Series(train_data[1]))
 
     data_cache[dag['input'][2]] = train_data
     models['input'] = True
 
-    def unfinished_models(): return [m for m in dag if m not in models]
+    def unfinished_models():
+        return [m for m in dag if m not in models]
 
-    def data_available(): return [
-        m for m in dag if data_ready(dag[m][0], data_cache)]
+    def data_available():
+        return [m for m in dag if data_ready(dag[m][0], data_cache)]
 
-    def next_methods(): return [
-        m for m in unfinished_models() if m in data_available()]
+    def next_methods():
+        return [m for m in unfinished_models() if m in data_available()]
 
     while next_methods():
 
@@ -107,7 +117,8 @@ def train_dag(dag, train_data, sample_weight=None):
             ModelClass, model_params = utils.get_model_by_name(dag[m][1])
             out_name = dag[m][2]
             if dag[m][1][0] == 'stacker':
-                sub_dags, initial_dag, input_data = extract_subgraphs(dag, m)
+                sub_dags, initial_dag, input_data = \
+                    dag_parser.extract_subgraphs(dag, m)
                 model_params = dict(sub_dags=sub_dags, initial_dag=initial_dag)
                 model = ModelClass(**model_params)
                 features, targets = data_cache[input_data]
@@ -160,7 +171,8 @@ def train_dag(dag, train_data, sample_weight=None):
             # save the outputs
             # the previous model divided the data into several data-sets
             if isinstance(trans, list):
-                if isinstance(model, custom_models.KMeansSplitter) and sample_weight is not None:
+                if isinstance(model, custom_models.KMeansSplitter) and
+                sample_weight is not None:
                     trans = [(x, targets.loc[x.index], sample_weight[model.weight_idx[i]])
                              for i, x in enumerate(trans)]  # need to divide the targets and the weights
                 else:
@@ -196,13 +208,14 @@ def test_dag(dag, models, test_data, output='preds_only'):
     data_cache[dag['input'][2]] = test_data
     finished['input'] = True
 
-    def unfinished_models(): return [m for m in dag if m not in finished]
+    def unfinished_models():
+        return [m for m in dag if m not in finished]
 
-    def data_available(): return [
-        m for m in dag if data_ready(dag[m][0], data_cache)]
+    def data_available():
+        return [m for m in dag if data_ready(dag[m][0], data_cache)]
 
-    def next_methods(): return [
-        m for m in unfinished_models() if m in data_available()]
+    def next_methods():
+        return [m for m in unfinished_models() if m in data_available()]
 
     while next_methods():
 
@@ -268,119 +281,6 @@ def test_dag(dag, models, test_data, output='preds_only'):
         return data_cache['output'][0]
 
     raise AttributeError(output, 'is not a valid output type')
-
-
-def normalize_spec(spec):
-    ins, mod, outs = spec
-    if len(ins) == 1:
-        ins = ins[0]
-    if len(outs) == 1:
-        outs = outs[0]
-    if len(outs) == 0:
-        outs = 'output'
-    return ins, mod, outs
-
-
-def extract_subgraphs(dag, node):
-    out = []
-
-    dag_nx = utils.dag_to_nx(dag)
-    reverse_dag_nx = dag_nx.reverse()
-
-    for p in dag_nx.predecessors(node):
-        out.append({k: v for k, v in dag.items() if k in list(
-            nx.dfs_preorder_nodes(reverse_dag_nx, p))})
-
-    common_nodes = [n for n in out[0] if all((n in o for o in out))]
-
-    toposort = list(nx.topological_sort(dag_nx))
-    sorted_common = sorted(common_nodes, key=lambda k: -toposort.index(k))
-
-    inputs = np.unique([dag[n][0] for n in dag_nx.successors(
-        sorted_common[0]) if any([n in o for o in out])])
-    assert len(inputs) == 1
-    input_id = inputs[0]
-    remove_common = sorted_common
-
-    nout = []
-
-    for o in out:
-        no = dict()
-        no['input'] = ([], 'input', input_id)
-        for k, v in o.items():
-            if k in remove_common:
-                continue
-            ins = v[2]
-            if not isinstance(ins, list):
-                ins = [ins]
-            if ins[0] in dag[node][0]:
-                no[k] = v[0], v[1], 'output'
-                continue
-            no[k] = v
-        nout.append(no)
-
-    initial_dag = {k: v for k, v in dag.items() if k in common_nodes}
-    for k, v in initial_dag.items():
-        if isinstance(v[2], list) and input_id in v[2]:
-            initial_dag[k] = (
-                v[0], v[1], [x if x != input_id else 'output' for x in v[2]])
-            break
-        if v[2] == input_id:
-            initial_dag[k] = (v[0], v[1], 'output')
-
-    return nout, initial_dag, input_id
-
-
-def normalize_dag(dag):
-
-    dag = process_boosters(dag)
-
-    normalized_dag = {k: normalize_spec(v) for (k, v) in dag.items()}
-
-    original_len = len(normalized_dag)
-
-    aliases = {normalized_dag[k][0]: normalized_dag[k][2]
-               for k in normalized_dag if normalized_dag[k][1][0] == "copy"}
-    normalized_dag = {
-        k: v for (k, v) in normalized_dag.items() if v[1][0] != 'copy'}
-
-    new_len = len(normalized_dag)
-
-    rev_aliases = {v: k for k in aliases for v in aliases[k]}
-    for i in range(original_len - new_len):
-        normalized_dag = {k: ((rev_aliases[ins] if not isinstance(ins, list) and ins in rev_aliases else ins), mod, out)
-                          for (k, (ins, mod, out)) in normalized_dag.items()}
-
-    return normalized_dag
-
-
-def process_boosters(dag):
-
-    dag_nx = utils.dag_to_nx(dag)
-
-    processed_dag = dict()
-    sub_dags = []
-    for k, spec in dag.items():
-        if spec[1][0] == 'booBegin':
-            input_name = spec[0]
-            for node in nx.dfs_preorder_nodes(dag_nx, k):
-                node_type = dag[node][1][0]
-                if node == k:
-                    continue
-                if node_type == 'booster':
-                    sub_dags.append(dag[node][1][2])
-                if node_type == 'booEnd':
-                    sub_dags = [normalize_dag(sd) for sd in sub_dags]
-                    processed_dag[k] = (
-                        input_name, ['booster', {'sub_dags': sub_dags}], dag[node][2])
-                    sub_dags = []
-                    break
-        elif spec[1][0] in ['booster', 'booEnd']:
-            continue
-        else:
-            processed_dag[k] = spec
-
-    return processed_dag
 
 
 input_cache = {}
@@ -451,8 +351,6 @@ def eval_dag(dag, filename, metrics_list, dag_id=None):
 
 
 def safe_dag_eval(dag, filename, metrics_list, dag_id=None):
-    import traceback
-    import json
 
     try:
         return eval_dag(dag, filename, metrics_list, dag_id), dag_id
