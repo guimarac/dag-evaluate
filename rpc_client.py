@@ -35,6 +35,8 @@ class RPCClient(object):
             ev_id, metrics = json.loads(
                 self.server_proxy.get_evaluated(candidate_id))
 
+        metrics['id'] = ev_id
+
         return metrics
 
     def get_datasets(self):

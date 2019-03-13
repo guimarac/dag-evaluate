@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 from rpc_client import RPCClient
 
 
@@ -7,7 +6,7 @@ client = RPCClient('http://localhost:8080')
 # client = RPCClient('http://automl.speed.dcc.ufmg.br:80')
 
 json_string = '{"input": [[], "input", ["1:0"]], "1": [["1:0"], ["gaussianNB", {}], []]}'
-dataset = 'winequality-white.csv'
+dataset = 'winequality-white'
 
 metrics_list = [
     {'metric': 'accuracy', 'args': {}, 'name': 'accuracy'},
@@ -16,9 +15,9 @@ metrics_list = [
     {'metric': 'f1', 'args': {'average': 'weighted'}, 'name': 'f1_weighted'}
 ]
 
-cand_id = client.submit(json_string, dataset, metrics_list)
+cand_id, metrics = client.evaluate_pipeline(json_string, dataset, metrics_list)
 
-results = client.get_evaluated(cand_id)
+print('Candidate id:', cand_id)
 
 print('\nResults:')
-print(results)
+print(metrics)

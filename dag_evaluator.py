@@ -171,8 +171,7 @@ def train_dag(dag, train_data, sample_weight=None):
             # save the outputs
             # the previous model divided the data into several data-sets
             if isinstance(trans, list):
-                if isinstance(model, custom_models.KMeansSplitter) and
-                sample_weight is not None:
+                if isinstance(model, custom_models.KMeansSplitter) and sample_weight is not None:
                     trans = [(x, targets.loc[x.index], sample_weight[model.weight_idx[i]])
                              for i, x in enumerate(trans)]  # need to divide the targets and the weights
                 else:

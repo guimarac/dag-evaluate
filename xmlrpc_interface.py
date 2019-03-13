@@ -19,7 +19,7 @@ def eval_dags(inputs: multiprocessing.Queue, evaluated_list):
         try:
             ind_id, ind_dag, filename, metrics_list = inputs.get(block=False)
 
-            ind_scores, _ind_id = eval.safe_dag_eval(
+            ind_scores, _ind_id = dag_evaluator.safe_dag_eval(
                 dag=ind_dag,
                 filename=filename,
                 dag_id=ind_id,
@@ -72,7 +72,7 @@ class DagEvalServer:
         for ind in self.evaluated_list:
             if ind[0] == ind_id:
                 self.evaluated_list.remove(ind)
-                return json.dumps([ind_id, ind])
+                return json.dumps(ind)
 
         return json.dumps([None, None])
 

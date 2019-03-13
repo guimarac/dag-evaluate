@@ -24,6 +24,8 @@ class Optimizer:
         print()
         print(metrics)
 
+        return candidate
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -69,6 +71,8 @@ def main(args):
     optimizer = Optimizer(server_url)
     best_pipeline = optimizer.run(args.dataset, metrics_list)
 
+    print('\n------------------------------------')
+    print('Best pipeline:')
     print(best_pipeline)
 
 
