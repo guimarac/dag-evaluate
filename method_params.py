@@ -36,8 +36,8 @@ model_names = {
     "QDA":
         custom_models.make_predictor(discriminant_analysis.
                                      QuadraticDiscriminantAnalysis),
-    # "MLP":
-    #     custom_models.make_predictor(neural_network.MLPClassifier),
+    "MLP":
+        custom_models.make_predictor(neural_network.MLPClassifier),
     "gaussianNB":
         custom_models.make_predictor(naive_bayes.GaussianNB),
     "DT":
