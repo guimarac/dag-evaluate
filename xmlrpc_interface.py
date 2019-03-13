@@ -1,5 +1,3 @@
-__author__ = 'Martin'
-
 from xmlrpc.server import SimpleXMLRPCServer
 import json
 import dag_evaluator
