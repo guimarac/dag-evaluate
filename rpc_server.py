@@ -15,7 +15,7 @@ stop_server = False
 def eval_dags(inputs: multiprocessing.Queue, evaluated_list):
     while True:
         try:
-            ind_id, ind_dag, filename, metrics_list, n_splits = inputs.get(
+            ind_id, ind_dag, filename, metrics_list, splits = inputs.get(
                 block=False)
 
             ind_scores, _ind_id = dag_evaluator.safe_dag_eval(
@@ -23,7 +23,7 @@ def eval_dags(inputs: multiprocessing.Queue, evaluated_list):
                 filename=filename,
                 dag_id=ind_id,
                 metrics_list=metrics_list,
-                n_splits=n_splits
+                splits=splits
             )
 
             assert ind_id == _ind_id
@@ -55,7 +55,7 @@ class DagEvalServer:
         for p in self.processes:
             p.start()
 
-    def submit(self, candidate_string, datafile, metrics_list, n_splits):
+    def submit(self, candidate_string, datafile, metrics_list, splits):
         candidate = json.loads(candidate_string)
 
         sub_time = time.time()
@@ -64,7 +64,7 @@ class DagEvalServer:
         m.update((candidate_string + str(sub_time)).encode())
         cand_id = m.hexdigest()
 
-        self.inputs.put((cand_id, candidate, datafile, metrics_list, n_splits))
+        self.inputs.put((cand_id, candidate, datafile, metrics_list, splits))
 
         return cand_id
 
@@ -134,6 +134,7 @@ if __name__ == '__main__':
     print('=============== Server Settings:')
     print('Server URL: ', server_url)
     print('Port Number:', port_number)
+    print('Num CPUs:', n_cpus)
     print()
 
     eval_server = DagEvalServer(n_cpus)

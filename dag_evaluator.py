@@ -282,9 +282,14 @@ def test_dag(dag, models, test_data, output='preds_only'):
 input_cache = {}
 
 
-def eval_dag_train_test(feats, targets, dag, metrics_dict):
-    # scores_dict = {metric: 0 for metric in metrics_dict.keys()}
+def eval_dag_train_test(feats, targets, dag, metrics_dict, test_size):
     scores_dict = {}
+    result = {}
+
+    if test_size <= 0 or test_size >= 1:
+        result['error'] = 'If argument "splits" is float, ' \
+                          'it must be greater than 0 and less than 1.'
+        return result
 
     feats_train, feats_test, targets_train, targets_test = train_test_split(
         feats, targets, test_size=0.3)
@@ -301,21 +306,27 @@ def eval_dag_train_test(feats, targets, dag, metrics_dict):
         args = config_dict['args']
         scores_dict[metric] = method(test_data[1], preds, **args)
 
-    results = {
+    result = {
         m: {
             'mean': scores_dict[m],
             'std': 0
         } for m in scores_dict.keys()
     }
 
-    results['time'] = end_time - start_time
+    result['time'] = end_time - start_time
 
-    return results
+    return result
 
 
 def eval_dag_kfold(feats, targets, dag, metrics_dict, n_splits):
     times = []
     scores_dict = {metric: [] for metric in metrics_dict.keys()}
+    result = {}
+
+    if n_splits < 2:
+        result['error'] = 'If argument "splits" is integer, ' \
+                          'it must be greater than or equal to 2.'
+        return result
 
     skf = StratifiedKFold(n_splits=n_splits)
 
@@ -338,24 +349,23 @@ def eval_dag_kfold(feats, targets, dag, metrics_dict, n_splits):
 
             times.append(end_time - start_time)
 
-        results = {
+        result = {
             m: {
                 'mean': np.mean(scores_dict[m]),
                 'std': np.std(scores_dict[m])
             } for m in scores_dict.keys()
         }
 
-        results['time'] = np.sum(times)
+        result['time'] = np.sum(times)
 
-        return results
+        return result
     except ValueError as e:
-        results = {}
-        results['error'] = str(e)
+        result['error'] = str(e)
 
-        return results
+        return result
 
 
-def eval_dag(dag, filename, metrics_list, n_splits):
+def eval_dag(dag, filename, metrics_list, splits):
     metrics_dict = {
         metric['name']: {
             'method': available_metrics[metric['metric']],
@@ -378,18 +388,20 @@ def eval_dag(dag, filename, metrics_list, n_splits):
     ix = targets.index
     targets = pd.Series(le.fit_transform(targets), index=ix)
 
-    if n_splits >= 2:
-        results = eval_dag_kfold(feats, targets, dag, metrics_dict, n_splits)
+    if type(splits) == int:
+        result = eval_dag_kfold(feats, targets, dag, metrics_dict, splits)
+    elif type(splits) == float:
+        result = eval_dag_train_test(feats, targets, dag, metrics_dict, splits)
     else:
-        results = eval_dag_train_test(feats, targets, dag, metrics_dict)
+        result = {'error': 'Wrong type of parameter "splits"'}
 
-    return results
+    return result
 
 
-def safe_dag_eval(dag, filename, metrics_list, n_splits, dag_id=None):
+def safe_dag_eval(dag, filename, metrics_list, splits, dag_id=None):
 
     try:
-        return eval_dag(dag, filename, metrics_list, n_splits), dag_id
+        return eval_dag(dag, filename, metrics_list, splits), dag_id
     except Exception as e:
         with open('error.' + str(dag_id), 'w') as err:
             err.write(str(e) + '\n')

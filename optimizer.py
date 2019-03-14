@@ -60,23 +60,21 @@ def main(args):
         'name': 'f1_score'
     }]
 
-    n_splits = 3
+    splits = 5
 
     if args.optimizer_config is not None:
         config = json.load(open(args.optimizer_config))
         metrics_list = config['metrics']
-        n_splits = config['n_splits']
-
-        print(n_splits)
+        splits = config['splits']
 
     print('----- RPC Client configuration -----')
     print('Server url:', server_url)
     print('\nDataset:', args.dataset)
     print('\nMetrics:', metrics_list)
-    print('\nNum splits:', n_splits)
+    print('\nSplits:', splits)
     print('\n------------------------------------')
 
-    optimizer = Optimizer(server_url, args.dataset, metrics_list, n_splits)
+    optimizer = Optimizer(server_url, args.dataset, metrics_list, splits)
     best_pipeline = optimizer.run()
 
     print('\n------------------------------------')
