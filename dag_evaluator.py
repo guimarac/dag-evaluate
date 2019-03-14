@@ -319,9 +319,8 @@ def eval_dag(dag, filename, metrics_list, dag_id=None):
 
         start_time = time.time()
         ms = train_dag(dag, train_data)
-        end_time = time.time()
-
         preds = test_dag(dag, ms, test_data)
+        end_time = time.time()
 
         for metric, config_dict in metrics_dict.items():
             method = config_dict['method']
@@ -339,10 +338,7 @@ def eval_dag(dag, filename, metrics_list, dag_id=None):
         } for m in scores_dict.keys()
     }
 
-    results['time'] = {
-        'mean': np.mean(times),
-        'std': np.std(times)
-    }
+    results['time'] = np.sum(times)
 
     return results
 
