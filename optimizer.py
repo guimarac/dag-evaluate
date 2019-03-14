@@ -35,10 +35,9 @@ def parse_args():
                         required=True, type=str,
                         help='Name of the dataset.')
 
-    parser.add_argument('-m', '--metrics_config',
+    parser.add_argument('-p', '--optimizer_config',
                         type=str,
-                        help='File that configures the metrics to be '
-                             'considered by the optimizer.')
+                        help='File that configures the optimizer.')
 
     parser.add_argument('-s', '--server_config',
                         type=str,
@@ -60,8 +59,9 @@ def main(args):
         'name': 'f1_score'
     }]
 
-    if args.metrics_config is not None:
-        metrics_list = json.load(open(args.metrics_config))
+    if args.optimizer_config is not None:
+        config = json.load(open(args.optimizer_config))
+        metrics_list = config['metrics']
 
     print('----- RPC Client configuration -----')
     print('Server url:', server_url)
