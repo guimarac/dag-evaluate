@@ -313,34 +313,41 @@ def eval_dag(dag, filename, metrics_list, dag_id=None):
 
     skf = StratifiedKFold(n_splits=5)
 
-    for train_idx, test_idx in skf.split(feats, targets):
-        train_data = (feats.iloc[train_idx], targets.iloc[train_idx])
-        test_data = (feats.iloc[test_idx], targets.iloc[test_idx])
+    try:
+        for train_idx, test_idx in skf.split(feats, targets):
+            train_data = (feats.iloc[train_idx], targets.iloc[train_idx])
+            test_data = (feats.iloc[test_idx], targets.iloc[test_idx])
 
-        start_time = time.time()
-        ms = train_dag(dag, train_data)
-        preds = test_dag(dag, ms, test_data)
-        end_time = time.time()
+            start_time = time.time()
+            ms = train_dag(dag, train_data)
+            preds = test_dag(dag, ms, test_data)
+            end_time = time.time()
 
-        for metric, config_dict in metrics_dict.items():
-            method = config_dict['method']
-            args = config_dict['args']
-            score = method(test_data[1], preds, **args)
+            for metric, config_dict in metrics_dict.items():
+                method = config_dict['method']
+                args = config_dict['args']
+                score = method(test_data[1], preds, **args)
 
-            scores_dict[metric].append(score)
+                scores_dict[metric].append(score)
 
-        times.append(end_time - start_time)
+            times.append(end_time - start_time)
 
-    results = {
-        m: {
-            'mean': np.mean(scores_dict[m]),
-            'std': np.std(scores_dict[m])
-        } for m in scores_dict.keys()
-    }
+        results = {
+            m: {
+                'mean': np.mean(scores_dict[m]),
+                'std': np.std(scores_dict[m])
+            } for m in scores_dict.keys()
+        }
 
-    results['time'] = np.sum(times)
+        results['time'] = np.sum(times)
 
-    return results
+        return results
+    except ValueError as e:
+        results = {}
+        results['error'] = str(e)
+        print(results)
+
+        return results
 
 
 def safe_dag_eval(dag, filename, metrics_list, dag_id=None):

@@ -37,6 +37,9 @@ class RPCClient(object):
 
         metrics['id'] = ev_id
 
+        if 'error' in metrics.keys():
+            raise ValueError(metrics['error'])
+
         return metrics
 
     def get_datasets(self):
