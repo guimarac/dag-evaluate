@@ -23,7 +23,7 @@ class Optimizer:
         results = self.evaluate_pipeline(candidate)
 
         print('Results:')
-        print(results)
+        print(json.dumps(results, indent=2, sort_keys=True))
 
         return candidate
 

@@ -4,19 +4,18 @@ import time
 import json
 import joblib
 import pprint
+import inspect
 import traceback
 import numpy as np
 import pandas as pd
 import networkx as nx
-from available_metrics import available_metrics
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, train_test_split
 from sklearn.base import ClassifierMixin, RegressorMixin
 from sklearn import preprocessing, decomposition, feature_selection
 
-
 import custom_models
 import utils
-import inspect
+from available_metrics import available_metrics
 from dag_parser import normalize_dag
 
 
@@ -283,7 +282,41 @@ def test_dag(dag, models, test_data, output='preds_only'):
 input_cache = {}
 
 
-def eval_dag_kfold(feats, targets, dag, metrics_dict, scores_dict, times, n_splits):
+def eval_dag_train_test(feats, targets, dag, metrics_dict):
+    # scores_dict = {metric: 0 for metric in metrics_dict.keys()}
+    scores_dict = {}
+
+    feats_train, feats_test, targets_train, targets_test = train_test_split(
+        feats, targets, test_size=0.3)
+    train_data = (feats_train, targets_train)
+    test_data = (feats_test, targets_test)
+
+    start_time = time.time()
+    ms = train_dag(dag, train_data)
+    preds = test_dag(dag, ms, test_data)
+    end_time = time.time()
+
+    for metric, config_dict in metrics_dict.items():
+        method = config_dict['method']
+        args = config_dict['args']
+        scores_dict[metric] = method(test_data[1], preds, **args)
+
+    results = {
+        m: {
+            'mean': scores_dict[m],
+            'std': 0
+        } for m in scores_dict.keys()
+    }
+
+    results['time'] = end_time - start_time
+
+    return results
+
+
+def eval_dag_kfold(feats, targets, dag, metrics_dict, n_splits):
+    times = []
+    scores_dict = {metric: [] for metric in metrics_dict.keys()}
+
     skf = StratifiedKFold(n_splits=n_splits)
 
     try:
@@ -329,7 +362,6 @@ def eval_dag(dag, filename, metrics_list, n_splits):
             'args': metric['args']
         } for metric in metrics_list
     }
-    scores_dict = {metric: [] for metric in metrics_dict.keys()}
 
     dag = normalize_dag(dag)
 
@@ -346,12 +378,10 @@ def eval_dag(dag, filename, metrics_list, n_splits):
     ix = targets.index
     targets = pd.Series(le.fit_transform(targets), index=ix)
 
-    times = []
-
-    start_time = time.time()
-
-    results = eval_dag_kfold(
-        feats, targets, dag, metrics_dict, scores_dict, times, n_splits)
+    if n_splits >= 2:
+        results = eval_dag_kfold(feats, targets, dag, metrics_dict, n_splits)
+    else:
+        results = eval_dag_train_test(feats, targets, dag, metrics_dict)
 
     return results
 
