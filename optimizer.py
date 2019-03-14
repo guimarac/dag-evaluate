@@ -5,24 +5,25 @@ from rpc_client import RPCClient
 
 
 class Optimizer:
-    def __init__(self, server_url):
+    def __init__(self, server_url, dataset, metrics_list, n_splits):
         self.client = RPCClient(server_url)
+        self.dataset = dataset
+        self.metrics_list = metrics_list
+        self.n_splits = n_splits
 
-    def evaluate_pipeline(self, candidate, dataset, metrics_list):
-        cand_id, metrics = self.client.evaluate_pipeline(
-            candidate, dataset, metrics_list)
+    def evaluate_pipeline(self, candidate):
+        results = self.client.evaluate_pipeline(
+            candidate, self.dataset, self.metrics_list, self.n_splits)
 
-        return cand_id, metrics
+        return results
 
-    def run(self, dataset, metrics_list):
+    def run(self):
         candidate = '{"input": [[], "input", ["1:0"]], "1": [["1:0"], ["gaussianNB", {}], []]}'
 
-        cand_id, metrics = self.evaluate_pipeline(
-            candidate, dataset, metrics_list)
+        results = self.evaluate_pipeline(candidate)
 
-        print(cand_id)
-        print()
-        print(metrics)
+        print('Results:')
+        print(results)
 
         return candidate
 
@@ -59,17 +60,24 @@ def main(args):
         'name': 'f1_score'
     }]
 
+    n_splits = 3
+
     if args.optimizer_config is not None:
         config = json.load(open(args.optimizer_config))
         metrics_list = config['metrics']
+        n_splits = config['n_splits']
+
+        print(n_splits)
 
     print('----- RPC Client configuration -----')
     print('Server url:', server_url)
-    print('Metrics:   ', metrics_list)
-    print('------------------------------------\n')
+    print('\nDataset:', args.dataset)
+    print('\nMetrics:', metrics_list)
+    print('\nNum splits:', n_splits)
+    print('\n------------------------------------')
 
-    optimizer = Optimizer(server_url)
-    best_pipeline = optimizer.run(args.dataset, metrics_list)
+    optimizer = Optimizer(server_url, args.dataset, metrics_list, n_splits)
+    best_pipeline = optimizer.run()
 
     print('\n------------------------------------')
     print('Best pipeline:')

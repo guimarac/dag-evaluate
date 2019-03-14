@@ -283,35 +283,8 @@ def test_dag(dag, models, test_data, output='preds_only'):
 input_cache = {}
 
 
-def eval_dag(dag, filename, metrics_list, dag_id=None):
-    metrics_dict = {
-        metric['name']: {
-            'method': available_metrics[metric['metric']],
-            'args': metric['args']
-        } for metric in metrics_list
-    }
-    scores_dict = {metric: [] for metric in metrics_dict.keys()}
-
-    dag = normalize_dag(dag)
-
-    if filename not in input_cache:
-        input_cache[filename] = pd.read_csv('data/' + filename, sep=';')
-
-    data = input_cache[filename]
-
-    feats = data[data.columns[:-1]]
-    targets = data[data.columns[-1]]
-
-    le = preprocessing.LabelEncoder()
-
-    ix = targets.index
-    targets = pd.Series(le.fit_transform(targets), index=ix)
-
-    times = []
-
-    start_time = time.time()
-
-    skf = StratifiedKFold(n_splits=5)
+def eval_dag_kfold(feats, targets, dag, metrics_dict, scores_dict, times, n_splits):
+    skf = StratifiedKFold(n_splits=n_splits)
 
     try:
         for train_idx, test_idx in skf.split(feats, targets):
@@ -345,15 +318,48 @@ def eval_dag(dag, filename, metrics_list, dag_id=None):
     except ValueError as e:
         results = {}
         results['error'] = str(e)
-        print(results)
 
         return results
 
 
-def safe_dag_eval(dag, filename, metrics_list, dag_id=None):
+def eval_dag(dag, filename, metrics_list, n_splits):
+    metrics_dict = {
+        metric['name']: {
+            'method': available_metrics[metric['metric']],
+            'args': metric['args']
+        } for metric in metrics_list
+    }
+    scores_dict = {metric: [] for metric in metrics_dict.keys()}
+
+    dag = normalize_dag(dag)
+
+    if filename not in input_cache:
+        input_cache[filename] = pd.read_csv('data/' + filename, sep=';')
+
+    data = input_cache[filename]
+
+    feats = data[data.columns[:-1]]
+    targets = data[data.columns[-1]]
+
+    le = preprocessing.LabelEncoder()
+
+    ix = targets.index
+    targets = pd.Series(le.fit_transform(targets), index=ix)
+
+    times = []
+
+    start_time = time.time()
+
+    results = eval_dag_kfold(
+        feats, targets, dag, metrics_dict, scores_dict, times, n_splits)
+
+    return results
+
+
+def safe_dag_eval(dag, filename, metrics_list, n_splits, dag_id=None):
 
     try:
-        return eval_dag(dag, filename, metrics_list, dag_id), dag_id
+        return eval_dag(dag, filename, metrics_list, n_splits), dag_id
     except Exception as e:
         with open('error.' + str(dag_id), 'w') as err:
             err.write(str(e) + '\n')
