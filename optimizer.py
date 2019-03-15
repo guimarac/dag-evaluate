@@ -5,20 +5,22 @@ from rpc_client import RPCClient
 
 
 class Optimizer:
-    def __init__(self, server_url, dataset, metrics_list, n_splits):
+    def __init__(self, server_url, dataset, metrics_list, n_splits, timeout):
         self.client = RPCClient(server_url)
         self.dataset = dataset
         self.metrics_list = metrics_list
         self.n_splits = n_splits
+        self.timeout = timeout
 
     def evaluate_pipeline(self, candidate):
         results = self.client.evaluate_pipeline(
-            candidate, self.dataset, self.metrics_list, self.n_splits)
+            candidate, self.dataset, self.metrics_list, self.n_splits, self.timeout)
 
         return results
 
     def run(self):
-        candidate = '{"input": [[], "input", ["1:0"]], "1": [["1:0"], ["gaussianNB", {}], []]}'
+        # candidate = '{"input": [[], "input", ["1:0"]], "1": [["1:0"], ["gaussianNB", {}], []]}'
+        candidate = '{"input": [[], "input", ["1:0"]], "1": [["1:0"], ["MLP", {"max_iter": 20}], []]}'
 
         results = self.evaluate_pipeline(candidate)
 
@@ -66,6 +68,7 @@ def main(args):
         config = json.load(open(args.optimizer_config))
         metrics_list = config['metrics']
         splits = config['splits']
+        timeout = config['timeout']
 
     print('----- RPC Client configuration -----')
     print('Server url:', server_url)
@@ -74,7 +77,7 @@ def main(args):
     print('\nSplits:', splits)
     print('\n------------------------------------')
 
-    optimizer = Optimizer(server_url, args.dataset, metrics_list, splits)
+    optimizer = Optimizer(server_url, args.dataset, metrics_list, splits, timeout)
     best_pipeline = optimizer.run()
 
     print('\n------------------------------------')

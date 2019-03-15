@@ -29,13 +29,13 @@ def exec_timeout(func, args, timeout):
 def eval_dags(inputs: multiprocessing.Queue, evaluated_list):
     while True:
         try:
-            ind_id, ind_dag, filename, metrics_list, splits = inputs.get(
+            ind_id, ind_dag, filename, metrics_list, splits, timeout = inputs.get(
                 block=False)
 
             ind_scores, _ind_id = exec_timeout(
                 func=dag_evaluator.safe_dag_eval,
                 args=[ind_dag, filename, metrics_list, splits, ind_id],
-                timeout=300
+                timeout=timeout
             )
 
             assert ind_id == _ind_id
@@ -67,7 +67,7 @@ class DagEvalServer:
         for p in self.processes:
             p.start()
 
-    def submit(self, candidate_string, datafile, metrics_list, splits):
+    def submit(self, candidate_string, datafile, metrics_list, splits, timeout):
         candidate = json.loads(candidate_string)
 
         sub_time = time.time()
@@ -76,7 +76,7 @@ class DagEvalServer:
         m.update((candidate_string + str(sub_time)).encode())
         cand_id = m.hexdigest()
 
-        self.inputs.put((cand_id, candidate, datafile, metrics_list, splits))
+        self.inputs.put((cand_id, candidate, datafile, metrics_list, splits, timeout))
 
         return cand_id
 

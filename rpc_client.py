@@ -9,16 +9,16 @@ class RPCClient(object):
         self.server_url = server_url
         self.server_proxy = ServerProxy(server_url)
 
-    def evaluate_pipeline(self, candidate, dataset, metrics_list, n_splits):
+    def evaluate_pipeline(self, candidate, dataset, metrics_list, n_splits, timeout):
         _dataset = dataset + '.csv'
 
-        cand_id = self._submit(candidate, _dataset, metrics_list, n_splits)
+        cand_id = self._submit(candidate, _dataset, metrics_list, n_splits, timeout)
 
         return self._get_evaluated(cand_id)
 
-    def _submit(self, candidate, dataset, metrics_list, n_splits):
+    def _submit(self, candidate, dataset, metrics_list, n_splits, timeout):
         return self.server_proxy.submit(
-            candidate, dataset, metrics_list, n_splits)
+            candidate, dataset, metrics_list, n_splits, timeout)
 
     def _get_evaluated(self, candidate_id):
         attempts = 0
