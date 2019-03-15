@@ -12,18 +12,30 @@ from hashlib import md5
 stop_server = False
 
 
+def exec_timeout(func, args, timeout):
+    pool = multiprocessing.Pool(1, maxtasksperchild=1)
+    result = pool.apply_async(func, args)
+    pool.close()
+
+    try:
+        ind_scores, ind_id = result.get(timeout)
+        return ind_scores, ind_id
+    except multiprocessing.TimeoutError:
+        pool.terminate()
+        print('\nTIME LIMIT EXCEEDED\n')
+        return {'error': 'Time limit exceeded'}, args[4]
+
+
 def eval_dags(inputs: multiprocessing.Queue, evaluated_list):
     while True:
         try:
             ind_id, ind_dag, filename, metrics_list, splits = inputs.get(
                 block=False)
 
-            ind_scores, _ind_id = dag_evaluator.safe_dag_eval(
-                dag=ind_dag,
-                filename=filename,
-                dag_id=ind_id,
-                metrics_list=metrics_list,
-                splits=splits
+            ind_scores, _ind_id = exec_timeout(
+                func=dag_evaluator.safe_dag_eval,
+                args=[ind_dag, filename, metrics_list, splits, ind_id],
+                timeout=300
             )
 
             assert ind_id == _ind_id
