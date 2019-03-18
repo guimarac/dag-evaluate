@@ -9,6 +9,10 @@ import time
 import argparse
 from hashlib import md5
 
+import warnings
+from sklearn.exceptions import ConvergenceWarning
+warnings.filterwarnings("ignore", category=ConvergenceWarning)
+
 stop_server = False
 
 

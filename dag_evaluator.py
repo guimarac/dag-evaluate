@@ -20,14 +20,11 @@ from dag_parser import normalize_dag
 
 
 cache_dir = 'cache'
-if os.path.exists('/media/ramdisk'):
-    cache_dir = '/media/ramdisk/cache'
-    print('Using ramdisk')
 
 memory = joblib.Memory(cachedir=cache_dir, verbose=False)
 
 
-@memory.cache
+# @memory.cache
 def fit_model(model, values, targets, sample_weight=None):
     isClass = isinstance(model, ClassifierMixin)
     isRegr = isinstance(model, RegressorMixin)
@@ -184,8 +181,7 @@ def train_dag(dag, train_data, sample_weight=None):
                 else:
                     trans = pd.DataFrame(trans)
                 trans.dropna(axis='columns', how='all', inplace=True)
-                data_cache[out_name] = (
-                    trans, targets)                 # save it
+                data_cache[out_name] = (trans, targets)    # save it
 
     return models
 

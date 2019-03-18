@@ -20,7 +20,7 @@ class Optimizer:
 
     def run(self):
         # candidate = '{"input": [[], "input", ["1:0"]], "1": [["1:0"], ["gaussianNB", {}], []]}'
-        candidate = '{"input": [[], "input", ["1:0"]], "1": [["1:0"], ["MLP", {"max_iter": 20}], []]}'
+        candidate = '{"input": [[], "input", ["1:0"]], "MLP": [["1:0"], ["MLP", {"max_iter": 20, "verbose": "True"}], []]}'
 
         results = self.evaluate_pipeline(candidate)
 
